@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Pages Are Worth Refreshing First? Predicting CTR Gaps from Search Data</title>
+<meta name="description" content="A research paper testing whether a Random Forest model beats a position-tier baseline at predicting which underperforming pages will gain the most from a content refresh, built on FlyRank search-performance data.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="rail" aria-label="Paper sections">
+  <span class="rail__mark">POSITION</span>
+  <ol class="rail__list">
+    <li class="rail__item"><a class="rail__link" href="#abstract" data-label="Abstract">01</a></li>
+    <li class="rail__item"><a class="rail__link" href="#introduction" data-label="Introduction">02</a></li>
+    <li class="rail__item"><a class="rail__link" href="#data" data-label="Data">03</a></li>
+    <li class="rail__item"><a class="rail__link" href="#methodology" data-label="Methodology">04</a></li>
+    <li class="rail__item"><a class="rail__link" href="#results" data-label="Results">05</a></li>
+    <li class="rail__item"><a class="rail__link" href="#limitations" data-label="Limitations">06</a></li>
+    <li class="rail__item"><a class="rail__link" href="#recommendations" data-label="Recommendations">07</a></li>
+    <li class="rail__item"><a class="rail__link" href="#reproducibility" data-label="Reproducibility">08</a></li>
+    <li class="rail__item"><a class="rail__link" href="#acknowledgments" data-label="Acknowledgments">09</a></li>
+  </ol>
+  <span class="rail__foot">SCROLL</span>
+</nav>
+
+<div class="shell">
+  <div class="wrap">
+
+    <!-- ============ HERO ============ -->
+    <header class="hero">
+      <div class="hero__meta">Research Paper · Content Refresh Prioritization · March 2026 Panel</div>
+      <h1>The opportunity gap: predicting which pages are worth refreshing</h1>
+      <p class="hero__dek">A position-tier baseline is what most content teams already use, informally, when they eyeball rank and guess. This paper tests whether a model trained on observable search signals can beat that guess on the same held-out pages — and turn the gap into a ranked action queue.</p>
+      <div class="hero__authorline"><b>FlyRank ML Internship</b> · Capstone research paper · Data credit in Acknowledgments</div>
+
+      <div class="scoreboard reveal">
+        <div class="scoreboard__cell scoreboard__cell--baseline">
+          <div class="scoreboard__label">Position-tier baseline</div>
+          <div class="scoreboard__value">0.521 <small>RMSE</small></div>
+          <div class="bar"><span></span></div>
+        </div>
+        <div class="scoreboard__cell scoreboard__cell--model">
+          <div class="scoreboard__label">Random Forest model</div>
+          <div class="scoreboard__value">0.420 <small>RMSE</small></div>
+          <div class="bar"><span></span></div>
+        </div>
+        <div class="scoreboard__cell scoreboard__cell--delta">
+          <div class="scoreboard__label">Error reduction</div>
+          <div class="scoreboard__value">−19.4%</div>
+        </div>
+      </div>
+      <p class="hero__caption">RMSE on CTR, held-out client domains, same 80/20 grouped split for both methods. Lower is better. Full method in §04, full table in §05.</p>
+    </header>
+
+    <!-- ============ ABSTRACT ============ -->
+    <section id="abstract" class="abstract">
+      <div class="eyebrow"><span class="section-num">01</span> Abstract</div>
+      <div class="abstract__box reveal">
+        <p>This study asks which historically underperforming pages will earn the highest engagement lift if refreshed — the question every content team faces with more URLs than hours to maintain them. It draws on FlyRank's anonymized 90-day search-performance release — impressions, position, content age, word count, and sessions — for a mid-panel slice of production pages. We compared a rigid position-tier median baseline against a Random Forest Regressor trained on the same observable signals, validated on client domains the model never saw during training. The model's prediction error came in 19.4% lower than the baseline's on that held-out set, surfacing non-linear opportunity the tier rule misses entirely. The output is a ranked action queue that lets content teams point refresh hours at the highest-ROI pages first, instead of the loudest ones.</p>
+        <div class="abstract__decision">
+          <b>Decision it supports</b>
+          Allocating writer and SEO-specialist hours strictly to pages with a measured probability of engagement uplift, and avoiding time spent on pages unlikely to respond to a refresh.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INTRODUCTION ============ -->
+    <section id="introduction" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">02</span>
+        <h2>Introduction &amp; problem statement</h2>
+      </div>
+      <div class="col">
+        <p>Most content teams maintain far more URLs than they have hours to maintain them. When it's time to decide what gets refreshed this sprint, the default heuristic is rank: pages sitting just outside page one get the attention, on the assumption that a nudge in position or a metadata rewrite will convert visibility into clicks. That heuristic is cheap to apply, but it treats every page in a rank tier as interchangeable — it can't tell a page that's underperforming its tier badly from one that's already earning everything its position can give it.</p>
+        <p>This paper tests a narrower, more falsifiable question: given only the search-performance signals a team already has — impressions, position, content age, length, sessions — can a model separate pages with a real, fixable CTR gap from pages that are already at their ceiling, better than a simple "median CTR for this rank tier" baseline can? If it can, the gap between predicted and actual CTR becomes a sortable queue, and refresh hours stop being spent by instinct.</p>
+        <p>The decision this supports is deliberately narrow: <em>where</em> to spend writer and SEO hours this sprint, not whether a given rewrite will work. That distinction matters throughout — see Limitations, §06.</p>
+      </div>
+    </section>
+
+    <!-- ============ DATA ============ -->
+    <section id="data" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">03</span>
+        <h2>Data</h2>
+      </div>
+      <div class="col">
+        <p>The underlying production panel this release is drawn from is FlyRank's search-performance index, on the order of tens of millions of rows across the full internship track. This analysis itself runs on a single anonymized, aggregated starter release, not the raw production panel.</p>
+        <dl class="spec">
+          <dt>Release &amp; table</dt>
+          <dd><code>content_refresh_anonymized.csv</code> — the FlyRank anonymized starter dataset, a mid-panel slice.</dd>
+          <dt>Date window</dt>
+          <dd>90-day rolling performance metrics, snapshotted March 2026.</dd>
+          <dt>Excluded — and why</dt>
+          <dd>FlyRank's own product outputs (<code>health_score</code>, <code>priority_score</code>) were left out of the feature set to avoid circular logic — training a model to reproduce a score it was meant to independently evaluate. <code>clicks_90d</code> was also excluded: alongside <code>impressions_90d</code> it algebraically reconstructs the label (<code>ctr</code>), which would leak the target rather than predict it.</dd>
+          <dt>Public-safety pass</dt>
+          <dd>All rows are pseudonymized and aggregated before release. No client names, raw URLs, or query strings appear anywhere in the dataset, the notebook, or this page.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ METHODOLOGY ============ -->
+    <section id="methodology" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">04</span>
+        <h2>Methodology</h2>
+      </div>
+      <div class="col">
+        <dl class="spec">
+          <dt>Working assumption</dt>
+          <dd>A page significantly underperforming its tier's expected CTR is more likely suffering from a fixable metadata or intent mismatch than a permanent SERP feature change. This assumption is not tested directly — see Limitations.</dd>
+          <dt>Features</dt>
+          <dd><code>impressions_90d</code>, <code>avg_position</code>, <code>content_age_days</code>, <code>word_count</code>, <code>sessions_90d</code>.</dd>
+          <dt>Label</dt>
+          <dd><code>ctr</code> — observed click-through rate over the 90-day window.</dd>
+          <dt>Baseline</dt>
+          <dd>A dynamic median: CTR for each page's position tier, computed on the training split and mapped onto held-out pages by tier.</dd>
+          <dt>Model</dt>
+          <dd>Random Forest Regressor (50 trees, max depth 7) trained on the same features and split as the baseline, so the comparison is apples-to-apples.</dd>
+          <dt>Validation design</dt>
+          <dd>Client-grouped holdout split, 80/20. Grouping by <code>client_id</code> forces training on one set of domains and testing on domains the model has never seen — without this, a model can "memorize" a site's architecture rather than learn a transferable signal.</dd>
+          <dt>Leakage checks</dt>
+          <dd>Reviewed against the target for both component leakage (clicks feeding into a click-rate label) and outcome-bucket leakage (trend percentages derived from the label). <code>clicks_90d</code> was the one feature removed as a result — see Data, §03.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section id="results" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">05</span>
+        <h2>Results — model vs. baseline</h2>
+      </div>
+      <div class="col">
+        <p>Both methods were scored on the identical held-out 20% of client domains, using root-mean-squared error (RMSE) on CTR. Lower is better.</p>
+      </div>
+
+      <div class="results-grid">
+        <div class="reveal">
+          <table class="metrics">
+            <thead>
+              <tr><th>Method</th><th class="num">RMSE</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Position-tier baseline <span class="basewrap">(base rate)</span></td>
+                <td class="num">0.521008</td>
+              </tr>
+              <tr class="win">
+                <td>Random Forest Regressor</td>
+                <td class="num">0.419816</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="callout">The baseline is the base rate here: it's what a team would predict with no model at all, using only rank tier. The Random Forest's error came in <strong>19.4% lower</strong> than that base rate on unseen domains — a measured reduction in prediction error, not a promised lift in any single page's CTR. See Limitations, §06.</p>
+        </div>
+
+        <figure class="chart reveal">
+          <img src="opportunity-landscape.png" alt="Scatter plot of expected minus actual CTR against average search position, for pages where the model predicts a positive gap. Most opportunity clusters in positions 1 through 20, with a long thin tail out past position 60.">
+          <figcaption>Fig. 1 — Opportunity landscape: predicted CTR gap (expected − actual) by average position, restricted to pages with a positive gap. Gap size and volume both concentrate in positions 1–20, which is where a refresh sprint would start.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ LIMITATIONS ============ -->
+    <section id="limitations" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">06</span>
+        <h2>Limitations</h2>
+      </div>
+      <div class="col">
+        <p>What this work cannot claim, stated as plainly as the result itself:</p>
+        <dl class="spec">
+          <dt>Causality</dt>
+          <dd>This is an observational study. A page's predicted gap is a correlation between its search signals and CTR — not evidence that refreshing it will close that exact gap. Treat the queue as a prioritization signal, not a forecast.</dd>
+          <dt>SERP features</dt>
+          <dd>The model has no visibility into zero-click surfaces — an AI overview or instant answer sitting above a result can suppress CTR regardless of the page's own quality, and the model will still flag that page as an opportunity.</dd>
+          <dt>Automation</dt>
+          <dd>This is a decision-support tool, not a decision-maker. It ranks candidates; a person still has to read the SERP and write the actual metadata.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============ RANKED RECOMMENDATIONS ============ -->
+    <section id="recommendations" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">07</span>
+        <h2>Ranked recommendations</h2>
+      </div>
+      <div class="col">
+        <p class="lede">The action playbook this model's output supports, in priority order.</p>
+      </div>
+
+      <ol class="rank-list">
+        <li class="rank-item reveal">
+          <span class="rank-item__num">01</span>
+          <div class="rank-item__body">
+            <h3>High visibility, severe underperformance</h3>
+            <p>Pages with more than 5,000 impressions but missing their expected CTR by more than 5%. Immediate priority for title tag, meta description, and search-intent review — the traffic is already there.</p>
+          </div>
+          <span class="tag tag--high">Sprint now</span>
+        </li>
+        <li class="rank-item reveal">
+          <span class="rank-item__num">02</span>
+          <div class="rank-item__body">
+            <h3>Page-one click bleed</h3>
+            <p>Pages ranking in positions 1–10 but losing clicks to competitors, with a gap above 3%. Position is already earned; the loss is happening in the snippet.</p>
+          </div>
+          <span class="tag tag--high">Sprint now</span>
+        </li>
+        <li class="rank-item reveal">
+          <span class="rank-item__num">03</span>
+          <div class="rank-item__body">
+            <h3>Moderate opportunity</h3>
+            <p>A real but smaller predicted gap. Route to the standard monthly refresh backlog rather than an active sprint.</p>
+          </div>
+          <span class="tag tag--watch">Backlog</span>
+        </li>
+        <li class="rank-item reveal">
+          <span class="rank-item__num">04</span>
+          <div class="rank-item__body">
+            <h3>No-go list</h3>
+            <p>Do not automate metadata deployment on model output alone. Move carefully — or not at all — on pages holding position 1 for core branded terms; the downside of an unforced error there outweighs the modeled upside.</p>
+          </div>
+          <span class="tag tag--hold">Hold</span>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ============ REPRODUCIBILITY ============ -->
+    <section id="reproducibility" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">08</span>
+        <h2>Reproducibility</h2>
+      </div>
+      <div class="col">
+        <p>The full analysis — data loading, the grouped split, both models, and the chart above — runs top to bottom from the notebook linked below. Anyone with repo access can rerun or inspect it directly.</p>
+      </div>
+      <ul class="repro-links">
+        <li>
+          <a href="https://github.com/YOUR-USERNAME/YOUR-REPO" target="_blank" rel="noopener">
+            <span class="title">Project repository</span>
+            <span class="path">github.com/YOUR-USERNAME/YOUR-REPO →</span>
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/YOUR-USERNAME/YOUR-REPO/blob/main/work/notebooks/capstone.ipynb" target="_blank" rel="noopener">
+            <span class="title">Capstone notebook</span>
+            <span class="path">work/notebooks/capstone.ipynb →</span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ ACKNOWLEDGMENTS ============ -->
+    <section id="acknowledgments" class="paper-section">
+      <div class="paper-section__head">
+        <span class="section-num">09</span>
+        <h2>Acknowledgments &amp; data credit</h2>
+      </div>
+      <div class="col ack reveal">
+        <p>Built on the <a href="https://flyrank.ai" target="_blank" rel="noopener">FlyRank ML Internship</a> dataset. Thank you to the FlyRank team for the anonymized starter release this research runs on.</p>
+      </div>
+
+      <footer class="page-foot">
+        <span>Capstone research paper · FlyRank ML Internship</span>
+        <span>Deployed via GitHub Pages</span>
+      </footer>
+    </section>
+
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
