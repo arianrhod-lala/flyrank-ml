@@ -90,12 +90,14 @@
         <h2>Data</h2>
       </div>
       <div class="col">
-        <p>The underlying production panel this release is drawn from is FlyRank's search-performance index, on the order of tens of millions of rows across the full internship track. This analysis itself runs on a single anonymized, aggregated starter release, not the raw production panel.</p>
+        <p>The full FlyRank search-performance warehouse is a gated release, accessed with a read token. This analysis runs on a single anonymized, aggregated starter table pulled from that warehouse, not the raw warehouse itself.</p>
         <dl class="spec">
           <dt>Release &amp; table</dt>
           <dd><code>content_refresh_anonymized.csv</code> — the FlyRank anonymized starter dataset, a mid-panel slice.</dd>
           <dt>Date window</dt>
           <dd>90-day rolling performance metrics, snapshotted March 2026.</dd>
+          <dt>Row filter</dt>
+          <dd>Restricted to pages with at least 500 impressions in the 90-day window and a valid (positive) average position — low-visibility and unranked rows don't carry a reliable CTR signal to learn from.</dd>
           <dt>Excluded — and why</dt>
           <dd>FlyRank's own product outputs (<code>health_score</code>, <code>priority_score</code>) were left out of the feature set to avoid circular logic — training a model to reproduce a score it was meant to independently evaluate. <code>clicks_90d</code> was also excluded: alongside <code>impressions_90d</code> it algebraically reconstructs the label (<code>ctr</code>), which would leak the target rather than predict it.</dd>
           <dt>Public-safety pass</dt>
@@ -121,7 +123,7 @@
           <dt>Baseline</dt>
           <dd>A dynamic median: CTR for each page's position tier, computed on the training split and mapped onto held-out pages by tier.</dd>
           <dt>Model</dt>
-          <dd>Random Forest Regressor (50 trees, max depth 7) trained on the same features and split as the baseline, so the comparison is apples-to-apples.</dd>
+          <dd>Random Forest Regressor (50 trees, max depth 7), <code>random_state=42</code>, trained on the same features and split as the baseline, so the comparison is apples-to-apples.</dd>
           <dt>Validation design</dt>
           <dd>Client-grouped holdout split, 80/20. Grouping by <code>client_id</code> forces training on one set of domains and testing on domains the model has never seen — without this, a model can "memorize" a site's architecture rather than learn a transferable signal.</dd>
           <dt>Leakage checks</dt>
@@ -161,7 +163,7 @@
         </div>
 
         <figure class="chart reveal">
-          <img src="opportunity-landscape.png" alt="Scatter plot of expected minus actual CTR against average search position, for pages where the model predicts a positive gap. Most opportunity clusters in positions 1 through 20, with a long thin tail out past position 60.">
+          <img src="assets/opportunity-landscape.png" alt="Scatter plot of expected minus actual CTR against average search position, for pages where the model predicts a positive gap. Most opportunity clusters in positions 1 through 20, with a long thin tail out past position 60.">
           <figcaption>Fig. 1 — Opportunity landscape: predicted CTR gap (expected − actual) by average position, restricted to pages with a positive gap. Gap size and volume both concentrate in positions 1–20, which is where a refresh sprint would start.</figcaption>
         </figure>
       </div>
@@ -239,7 +241,7 @@
         <h2>Reproducibility</h2>
       </div>
       <div class="col">
-        <p>The full analysis — data loading, the grouped split, both models, and the chart above — runs top to bottom from the notebook linked below. Anyone with repo access can rerun or inspect it directly.</p>
+        <p>The full analysis — data loading, the grouped split, both models, and the chart above — runs top to bottom from the notebook linked below. Both the baseline and the Random Forest use <code>random_state=42</code>, so a fresh run should reproduce the numbers in §05 exactly. Anyone with repo access can rerun or inspect it directly.</p>
       </div>
       <ul class="repro-links">
         <li>
