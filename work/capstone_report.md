@@ -1,9 +1,9 @@
 # Capstone Report — CTR / Engagement Opportunity Scoring
 
-- **Author:** Ian Lesigues
+- **Author:** <your name>
 - **Lane:** CTR / Engagement Opportunity Scoring
-- **Repo:** https://github.com/arianrhod-lala/flyrank-ml
-- **Date:** August 17, 2026
+- **Repo:** <your repo URL>
+- **Date:** <submission date>
 
 > Copy this file to `work/capstone_report.md` and fill in the four placeholders above.
 
@@ -88,18 +88,36 @@ have little CTR headroom left to recover regardless of content quality.
 
 ## 6. Interpretation
 
-*Not yet run.* The current notebook doesn't print `rf_model.feature_importances_`, so this
-report can't honestly claim which feature is driving the model's predictions yet — only that
-the model as a whole outperforms the baseline. Add this before submitting:
+Feature importance and residual error were computed in `work/notebooks/w05_model.ipynb`
+(same features, target, filter, and split as the capstone) via
+`rf_model.feature_importances_`:
 
-```python
-importances = pd.Series(rf_model.feature_importances_, index=features).sort_values(ascending=False)
-print(importances)
-```
+| Feature | Importance |
+|---|---|
+| `sessions_90d` | 0.384408 |
+| `avg_position` | 0.253978 |
+| `impressions_90d` | 0.164532 |
+| `word_count` | 0.136093 |
+| `content_age_days` | 0.060989 |
 
-Fill this section in with the printed ranking and one plain-language sentence per top feature
-once you've run it. Surprises or a feature landing lower than expected (a genuine "no effect")
-are worth reporting as-is rather than leaving out.
+**In plain words:** actual user interaction (`sessions_90d`) drives the model's expectation
+more than rank does. `avg_position` alone — the entire basis of the position-tier baseline —
+is only the second-most-important signal, which is consistent with the model beating that
+baseline: raw rank is real information, but it's not the dominant one once visitor behavior
+is available. `content_age_days` barely moves the prediction, which is a mild negative
+result worth stating plainly: staleness by itself isn't a strong signal in this feature set,
+so "the page is old" is a weaker justification for prioritizing a refresh than "the page is
+under-visited relative to its rank."
+
+**Error analysis:** the residual plot (actual CTR − predicted CTR) shows the model's largest
+misses cluster in positions 1–3, with errors mostly small and centered near zero from
+position ~10 onward. This tracks a known pattern in search: a branded, navigational query can
+pull an 80%+ CTR at position 1, while a broad informational query might only pull 15% at the
+same position — and the feature set has no query-intent signal to tell those apart. Net
+effect: the model tends to underpredict CTR for highly-branded top-of-SERP pages and
+overpredict it for informational ones in that same top slot. This is a genuine limitation of
+the current feature set, not a modeling bug, and it's why the ranked recommendations
+(§7) don't treat position-1 branded pages as safe to auto-flag.
 
 ## 7. Recommendation
 

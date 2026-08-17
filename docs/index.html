@@ -167,6 +167,46 @@
           <figcaption>Fig. 1 — Opportunity landscape: predicted CTR gap (expected − actual) by average position, restricted to pages with a positive gap. Gap size and volume both concentrate in positions 1–20, which is where a refresh sprint would start.</figcaption>
         </figure>
       </div>
+
+      <div class="col reveal" style="margin-top: 2.8rem;">
+        <h3>What the model actually leans on</h3>
+        <p>Reading <code>rf_model.feature_importances_</code> answers a question the RMSE table can't: is the model just re-deriving rank, or has it found something the position-tier baseline misses?</p>
+      </div>
+
+      <div class="results-grid" style="margin-top: 1.2rem;">
+        <div class="reveal">
+          <table class="metrics">
+            <thead>
+              <tr><th>Feature</th><th class="num">Importance</th></tr>
+            </thead>
+            <tbody>
+              <tr class="win"><td>sessions_90d</td><td class="num">0.384408</td></tr>
+              <tr><td>avg_position</td><td class="num">0.253978</td></tr>
+              <tr><td>impressions_90d</td><td class="num">0.164532</td></tr>
+              <tr><td>word_count</td><td class="num">0.136093</td></tr>
+              <tr><td>content_age_days</td><td class="num">0.060989</td></tr>
+            </tbody>
+          </table>
+          <p class="callout">Actual visitor behavior (<code>sessions_90d</code>) outweighs rank itself — <code>avg_position</code>, the entire basis of the baseline, is only the second-most-important signal. <code>content_age_days</code> barely moves the prediction: on its own, "this page is old" is weak evidence for prioritizing a refresh.</p>
+        </div>
+
+        <figure class="chart reveal">
+          <img src="assets/feature-importance.png" alt="Horizontal bar chart of Random Forest feature importances for expected CTR: sessions_90d highest at roughly 0.38, then avg_position, impressions_90d, word_count, and content_age_days lowest at roughly 0.06.">
+          <figcaption>Fig. 2 — Feature importance for the Random Forest model. Visitor behavior and rank dominate; content staleness contributes least.</figcaption>
+        </figure>
+      </div>
+
+      <div class="results-grid" style="margin-top: 2.4rem;">
+        <div class="col reveal">
+          <h3>Where the model is wrong</h3>
+          <p>The residual plot below (actual CTR minus predicted CTR) shows the largest errors sitting at positions 1–3, then tightening toward zero from around position 10 onward.</p>
+          <p class="callout callout--gap">The feature set has no query-intent signal, so the model can't tell a branded, navigational query (which can pull 80%+ CTR at position 1) from a broad informational one (which might only pull 15% at the same position). Net effect: it tends to underpredict CTR for branded top-of-SERP pages and overpredict it for informational ones in that same slot — a real limitation of this feature set, not a modeling bug. It's why the No-go list in §07 treats position-1 branded pages carefully rather than as safe to auto-flag.</p>
+        </div>
+        <figure class="chart reveal">
+          <img src="assets/residuals-by-position.png" alt="Scatter plot of residual error, actual CTR minus predicted CTR, against average position. Errors are largest and most scattered at positions 1 through 3, and tighten toward zero from around position 10 onward.">
+          <figcaption>Fig. 3 — Residual error by average position. Most points near zero from position ~10 on; the widest misses cluster at the very top of the SERP.</figcaption>
+        </figure>
+      </div>
     </section>
 
     <!-- ============ LIMITATIONS ============ -->
