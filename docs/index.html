@@ -62,7 +62,7 @@
     <section id="abstract" class="abstract">
       <div class="eyebrow"><span class="section-num">01</span> Abstract</div>
       <div class="abstract__box reveal">
-        <p>This study asks which historically underperforming pages will earn the highest engagement lift if refreshed — the question every content team faces with more URLs than hours to maintain them. It draws on FlyRank's anonymized 90-day search-performance release — impressions, position, content age, word count, and sessions — for a mid-panel slice of production pages. We compared a rigid position-tier median baseline against a Random Forest Regressor trained on the same observable signals, validated on client domains the model never saw during training. The model's prediction error came in 19.4% lower than the baseline's on that held-out set, surfacing non-linear opportunity the tier rule misses entirely. The output is a ranked action queue that lets content teams point refresh hours at the highest-ROI pages first, instead of the loudest ones.</p>
+        <p>This study asks which historically underperforming pages will earn the highest engagement lift if refreshed — the question every content team faces with more URLs than hours to maintain them. It draws on FlyRank's anonymized 90-day search-performance release (impressions, position, content age, word count, and sessions) for a mid-panel slice of production pages. We compared a rigid position-tier median baseline against a Random Forest Regressor trained on the same observable signals, validated on client domains the model never saw during training. The model's prediction error came in 19.4% lower than the baseline's on that held-out set, surfacing non-linear opportunity the tier rule misses entirely. The output is a ranked action queue that lets content teams point refresh hours at the highest-ROI pages first, instead of the loudest ones.</p>
         <div class="abstract__decision">
           <b>Decision it supports</b>
           Allocating writer and SEO-specialist hours strictly to pages with a measured probability of engagement uplift, and avoiding time spent on pages unlikely to respond to a refresh.
@@ -78,7 +78,7 @@
       </div>
       <div class="col">
         <p>Most content teams maintain far more URLs than they have hours to maintain them. When it's time to decide what gets refreshed this sprint, the default heuristic is rank: pages sitting just outside page one get the attention, on the assumption that a nudge in position or a metadata rewrite will convert visibility into clicks. That heuristic is cheap to apply, but it treats every page in a rank tier as interchangeable — it can't tell a page that's underperforming its tier badly from one that's already earning everything its position can give it.</p>
-        <p>This paper tests a narrower, more falsifiable question: given only the search-performance signals a team already has — impressions, position, content age, length, sessions — can a model separate pages with a real, fixable CTR gap from pages that are already at their ceiling, better than a simple "median CTR for this rank tier" baseline can? If it can, the gap between predicted and actual CTR becomes a sortable queue, and refresh hours stop being spent by instinct.</p>
+        <p>This paper tests a narrower, more falsifiable question: given only the search-performance signals a team already has (impressions, position, content age, length, sessions) can a model separate pages with a real, fixable CTR gap from pages that are already at their ceiling, better than a simple "median CTR for this rank tier" baseline can? If it can, the gap between predicted and actual CTR becomes a sortable queue, and refresh hours stop being spent by instinct.</p>
         <p>The decision this supports is deliberately narrow: <em>where</em> to spend writer and SEO hours this sprint, not whether a given rewrite will work. That distinction matters throughout — see Limitations, §06.</p>
       </div>
     </section>
@@ -125,7 +125,7 @@
           <dt>Model</dt>
           <dd>Random Forest Regressor (50 trees, max depth 7), <code>random_state=42</code>, trained on the same features and split as the baseline, so the comparison is apples-to-apples.</dd>
           <dt>Validation design</dt>
-          <dd>Client-grouped holdout split, 80/20. Grouping by <code>client_id</code> forces training on one set of domains and testing on domains the model has never seen — without this, a model can "memorize" a site's architecture rather than learn a transferable signal.</dd>
+          <dd>Client-grouped holdout split, 80/20. Grouping by <code>client_id</code> forces training on one set of domains and testing on domains the model has never seen to limit "memorization" of a site's architecture rather than learning a transferable signal.</dd>
           <dt>Leakage checks</dt>
           <dd>Reviewed against the target for both component leakage (clicks feeding into a click-rate label) and outcome-bucket leakage (trend percentages derived from the label). <code>clicks_90d</code> was the one feature removed as a result — see Data, §03.</dd>
         </dl>
@@ -159,7 +159,7 @@
               </tr>
             </tbody>
           </table>
-          <p class="callout">The baseline is the base rate here: it's what a team would predict with no model at all, using only rank tier. The Random Forest's error came in <strong>19.4% lower</strong> than that base rate on unseen domains — a measured reduction in prediction error, not a promised lift in any single page's CTR. See Limitations, §06.</p>
+          <p class="callout">The baseline is the base rate here: it's what a team would predict with no model at all, using only rank tier. The Random Forest's error came in <strong>19.4% lower</strong> than that base rate on unseen domains — a measured reduction in prediction error. See Limitations, §06.</p>
         </div>
 
         <figure class="chart reveal">
@@ -281,7 +281,7 @@
         <h2>Reproducibility</h2>
       </div>
       <div class="col">
-        <p>The full analysis — data loading, the grouped split, both models, and the chart above — runs top to bottom from the notebook linked below. Both the baseline and the Random Forest use <code>random_state=42</code>, so a fresh run should reproduce the numbers in §05 exactly. Anyone with repo access can rerun or inspect it directly.</p>
+        <p>The full analysis involving data loading, the grouped split, both models, and the chart above runs top to bottom from the notebook linked below. Both the baseline and the Random Forest use <code>random_state=42</code>, so a fresh run should reproduce the numbers in §05 exactly. Anyone with repo access can rerun or inspect it directly.</p>
       </div>
       <ul class="repro-links">
         <li>
